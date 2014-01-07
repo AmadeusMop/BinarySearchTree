@@ -34,9 +34,16 @@ public class BST {
 		root.printInfix();
 	}
 	
-	public String toString() {
-		
+	public void printTree() {
 	}
+	
+	public int length() {
+		return root.length();
+	}
+	
+	/*public String toString() {
+		
+	}*/
 	
 	@SuppressWarnings("unused")
 	private TreeNode get(int val) {
@@ -48,6 +55,10 @@ public class BST {
 		TreeNode left;
 		TreeNode right;
 		int value;
+		
+		public int length() {
+			return (1 + (left != null ? left.length() : 0) + (right != null ? right.length() : 0));
+		}
 		
 		public TreeNode(int val) {
 			this(val, null, null);
