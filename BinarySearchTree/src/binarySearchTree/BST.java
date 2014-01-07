@@ -1,10 +1,11 @@
 package binarySearchTree;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class BST {
 	TreeNode root;
+	
+	public BST() {
+		this.root = null;
+	}
 	
 	public boolean exists(int val) {
 		if(root == null) return false;
@@ -29,6 +30,15 @@ public class BST {
 		}
 	}
 	
+	public void printInfix() {
+		root.printInfix();
+	}
+	
+	public String toString() {
+		
+	}
+	
+	@SuppressWarnings("unused")
 	private TreeNode get(int val) {
 		if(exists(val)) return root.get(val);
 		else return null;
@@ -72,24 +82,15 @@ public class BST {
 			}
 		}
 		
-		List<TreeNode> getTreeAsList() {
-			List<TreeNode> l = new ArrayList<TreeNode>();
-			l.add(this);
-			if(left != null) {
-				l = left.getTreeAsList().addAll(l);
-			}
-		}
-		
-		void add(TreeNode node) {
-			if(node.value = value) throw new IllegalArgumentException();
-			if(node.value < value) {
-				if()
-			}
-		}
-		
 		TreeNode delete(int val) {
 			if(val == value) {
+				if(left == null) return right;
+				if(right == null) return left;
 				
+				TreeNode largest = left;
+				while(largest.right != null) largest = largest.right;
+				largest.right = right;
+				return left;
 			} else {
 				if(val < value) {
 					left = left.delete(val);
@@ -106,6 +107,22 @@ public class BST {
 				return left.get(val);
 			} else {
 				return right.get(val);
+			}
+		}
+		
+		public String toString() {
+			return Integer.toString(value);
+		}
+		
+		void printInfix() {
+			if(left != null) {
+				left.printInfix();
+				System.out.print(", ");
+			}
+			System.out.print(this.toString());
+			if(right != null) {
+				System.out.print(", ");
+				right.printInfix();
 			}
 		}
 	}
