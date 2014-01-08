@@ -1,5 +1,7 @@
 package binarySearchTree;
 
+import java.util.Arrays;
+
 public class Main {
 
 	/**
@@ -7,11 +9,15 @@ public class Main {
 	 */
 	public static void main(String[] args) {
 		BST tree = new BST();
-		int[] l = new int[] {0, 1, 5, 2, 7, 3, 2, 9, 4};
+		tree.insert(50);
+		int[] l = new int[] {0, 10, 20, 70, 30, 90, 40};
 		for(int i : l) {
 			tree.insert(i);
 		}
-		tree.printInfix();
+		tree.delete(50);
+		System.out.println(Arrays.toString(tree.getInOrderTraversal()));
+		Arrays.sort(l);
+		System.out.println(Arrays.toString(l));
 	}
 
 }

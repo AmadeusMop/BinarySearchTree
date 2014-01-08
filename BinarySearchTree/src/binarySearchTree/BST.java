@@ -30,11 +30,22 @@ public class BST {
 		}
 	}
 	
-	public void printInfix() {
-		root.printInfix();
+	public int[] getInOrderTraversal() {
+		String[] infix = root.getInfix().split(", ");
+		int l = infix.length;
+		int[] output = new int[l];
+		for(int i = 0; i < l; i++) {
+			output[i] = Integer.parseInt(infix[i]);
+		}
+		return output;
+	}
+	
+	public String getInfix() {
+		return root.getInfix();
 	}
 	
 	public void printTree() {
+		root.printTree(0);
 	}
 	
 	public int length() {
@@ -51,7 +62,7 @@ public class BST {
 		else return null;
 	}
 	
-	class TreeNode {
+	protected class TreeNode {
 		TreeNode left;
 		TreeNode right;
 		int value;
@@ -95,13 +106,19 @@ public class BST {
 		
 		TreeNode delete(int val) {
 			if(val == value) {
-				if(left == null) return right;
-				if(right == null) return left;
+				if(left == null || right == null) {
+					TreeNode o = (left == null ? right : left);
+					left = null;
+					right = null;
+					return o;
+				}
 				
-				TreeNode largest = left;
-				while(largest.right != null) largest = largest.right;
+				TreeNode largest = left, parent = this;
+				while(largest.right != null) {parent = largest; largest = largest.right;}
+				parent.right = largest.left;
+				largest.left = left;
 				largest.right = right;
-				return left;
+				return largest;
 			} else {
 				if(val < value) {
 					left = left.delete(val);
@@ -125,16 +142,26 @@ public class BST {
 			return Integer.toString(value);
 		}
 		
-		void printInfix() {
+		void printTree(int depth) {
+			if(right != null) right.printTree(depth+1);
+			
+			for(int i = 0; i < depth; i++) {
+				System.out.print("  ");
+			}
+			System.out.println(value);
+			
+			if(left != null) left.printTree(depth+1);
+		}
+		
+		String getInfix() {
+			String o = Integer.toString(value);
 			if(left != null) {
-				left.printInfix();
-				System.out.print(", ");
+				o = left.getInfix() + ", " + o;
 			}
-			System.out.print(this.toString());
 			if(right != null) {
-				System.out.print(", ");
-				right.printInfix();
+				o = o +  ", " + right.getInfix();
 			}
+			return o;
 		}
 	}
 }
