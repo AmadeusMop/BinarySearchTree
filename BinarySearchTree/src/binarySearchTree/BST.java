@@ -1,18 +1,21 @@
 package binarySearchTree;
 
-public class BST {
+import java.util.ArrayList;
+import java.util.List;
+
+public class BST<V extends Comparable<V>> {
 	TreeNode root;
 	
 	public BST() {
 		this.root = null;
 	}
 	
-	public boolean exists(int val) {
+	public boolean exists(V val) {
 		if(root == null) return false;
 		return root.exists(val);
 	}
 	
-	void insert(int val) {
+	void insert(V val) {
 		if(root == null) {
 			root = new TreeNode(val);
 		} else if(exists(val)) {
@@ -22,30 +25,20 @@ public class BST {
 		}
 	}
 	
-	void delete(int val) {
+	void delete(V val) {
 		if(root == null || !exists(val)) {
 			return;
 		} else {
 			root = root.delete(val);
 		}
 	}
+
+	public List<V> getPrefix();
+	public List<V> getInfix();
+	public List<V> getPostfix();
 	
-	public int[] getInOrderTraversal() {
-		String[] infix = root.getInfix().split(", ");
-		int l = infix.length;
-		int[] output = new int[l];
-		for(int i = 0; i < l; i++) {
-			output[i] = Integer.parseInt(infix[i]);
-		}
-		return output;
-	}
-	
-	public String getInfix() {
+	public List<V> getInOrderTraversal() {
 		return root.getInfix();
-	}
-	
-	public void printTree() {
-		root.printTree(0);
 	}
 	
 	public int length() {
@@ -57,7 +50,7 @@ public class BST {
 	}*/
 	
 	@SuppressWarnings("unused")
-	private TreeNode get(int val) {
+	private TreeNode get(V val) {
 		if(exists(val)) return root.get(val);
 		else return null;
 	}
@@ -65,31 +58,31 @@ public class BST {
 	protected class TreeNode {
 		TreeNode left;
 		TreeNode right;
-		int value;
+		V value;
 		
-		public int length() {
+		protected int length() {
 			return (1 + (left != null ? left.length() : 0) + (right != null ? right.length() : 0));
 		}
 		
-		public TreeNode(int val) {
+		protected TreeNode(V val) {
 			this(val, null, null);
 		}
 		
-		public TreeNode(int val, TreeNode left, TreeNode right) {
+		protected TreeNode(V val, TreeNode left, TreeNode right) {
 			value = val;
 			this.left = left;
 			this.right = right;
 		}
 		
-		boolean exists(int val) {
+		protected boolean exists(V val) {
 			if(value == val) return true;
-			TreeNode n = (val < value ? left : right);
+			TreeNode n = (val.compareTo(value) < 0 ? left : right);
 			if(n == null) return false;
 			return n.exists(val);
 		}
 		
-		void insert(int val) {
-			if(val < value) {
+		protected void insert(V val) {
+			if(val.compareTo(value) < 0) {
 				if(left == null) {
 					left = new TreeNode(val);
 				} else {
@@ -104,7 +97,7 @@ public class BST {
 			}
 		}
 		
-		TreeNode delete(int val) {
+		protected TreeNode delete(V val) {
 			if(val == value) {
 				if(left == null || right == null) {
 					TreeNode o = (left == null ? right : left);
@@ -120,7 +113,7 @@ public class BST {
 				largest.right = right;
 				return largest;
 			} else {
-				if(val < value) {
+				if(val.compareTo(value) < 0) {
 					left = left.delete(val);
 				} else {
 					right = right.delete(val);
@@ -129,39 +122,29 @@ public class BST {
 			}
 		}
 		
-		TreeNode get(int val) {
-			if(value == val) return this;
-			else if(val < value) {
+		protected TreeNode get(V val) {
+			if(value.compareTo(val) == 0) return this;
+			else if(val.compareTo(value) < 0) {
 				return left.get(val);
 			} else {
 				return right.get(val);
 			}
 		}
 		
-		public String toString() {
-			return Integer.toString(value);
-		}
-		
-		void printTree(int depth) {
-			if(right != null) right.printTree(depth+1);
-			
-			for(int i = 0; i < depth; i++) {
-				System.out.print("  ");
-			}
-			System.out.println(value);
-			
-			if(left != null) left.printTree(depth+1);
-		}
-		
-		String getInfix() {
-			String o = Integer.toString(value);
+		protected List<V> getFix(int type) { //TODO: Make type an enum
+			List<V> o = new ArrayList<V>();
 			if(left != null) {
-				o = left.getInfix() + ", " + o;
+				o.addAll(left.getInfix());
 			}
+			o.add(value);
 			if(right != null) {
-				o = o +  ", " + right.getInfix();
+				o.addAll(right.getInfix());
 			}
 			return o;
+		}
+		
+		public String toString() {
+			return "(" + value.toString() + ")";
 		}
 	}
 }
