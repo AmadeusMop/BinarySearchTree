@@ -100,7 +100,7 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		return sb.toString();
 	}
 	
-	private class TreeNode {
+	private class TreeNode implements Comparable<TreeNode> {
 		private TreeNode left;
 		private TreeNode right;
 		private V value;
@@ -289,6 +289,10 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		
 		public String toString() {
 			return String.format("[%1s]", value.toString());
+		}
+		
+		public int compareTo(TreeNode o) {
+			return value.compareTo(o.value);
 		}
 	}
 	
