@@ -1,16 +1,14 @@
 package binarySearchTree;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to work with Comparable, I have refrained from using V.equals() at any point, instead using the more consistent V.compareTo() == 0.
+public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to work with Comparable, I have opted to refrain from using V.equals() at any point, instead using the more consistent (with Comparables) V.compareTo() == 0.
 	private TreeNode root;
 	private final EmptyTreeNode empty;
 	
 	public BST() {
 		empty = new EmptyTreeNode();
-		empty.setChildren(empty, empty);
 		root = empty;
 	}
 	
@@ -23,15 +21,11 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 	}
 	
 	public synchronized void delete(V val) {
-		if(!exists(val)) {
-			return;
-		} else {
-			root = root.delete(val);
-		}
+		root = root.delete(val);
 	}
 	
 	public synchronized List<V> getInOrderTraversal() {
-		return root.traverse(TraversalType.INFIX);
+		return root.traverse();
 	}
 	
 	public synchronized int size() {
@@ -39,7 +33,6 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 	}
 	
 	public synchronized void refresh() {
-		if(root == empty) return;
 		NodeList nodes = root.traverseNodes();
 		root.disconnect();
 		root = nodes.remove(nodes.size()/2); // I use (nodes.size()/2) because this way, an even number of nodes
@@ -47,57 +40,64 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 	}
 	
 	public synchronized String toString() {
-		StringBuilder sb = new StringBuilder(); //TODO: BST.toString()
+		/*
+		 * Ugh. This method is a bit of a mess. It's like the grimy underbelly of the 
+		 * elegant and beautiful recursion city. But it works.
+		 * 
+		 * Mostly.
+		 */
+		StringBuilder sb = new StringBuilder(), spaceBuilder = new StringBuilder(), lineBuilder = new StringBuilder();
 		NodeList nodes = new NodeList();
 		nodes.add(root);
 		NodeList next = new NodeList();
+		int len = 1, size, index;
+		String space, line;
+		for(TreeNode node : nodes) {
+			size = node.toString().length();
+			if(size > len) len = size;
+		}
+		for(int i = 0; i < len; i++) {
+			spaceBuilder.append(' ');
+			lineBuilder.append('_');
+		}
+		space = spaceBuilder.toString();
+		line = lineBuilder.toString();
+		
 		while(!nodes.isEmpty()) {
-			sb.append(" . ");
+			sb.append(' ');
 			for(TreeNode node : nodes) {
-				if(node == empty) {
-					sb.append(" . ");
-					next.add(node);
-					continue;
-				}
 				next.add(node.left);
 				next.add(node.right);
-				for(int i = 0; i < node.left.left.size(); i++) sb.append(" . ");
-				for(int i = 0; i < node.left.right.size(); i++) sb.append("___");
+				for(int i = 0; i < node.left.left.size(); i++) sb.append(space);
+				for(int i = 0; i < node.left.right.size(); i++) sb.append(line);
 				sb.append(node.toString());
 				if(node.left != empty) {
-					int i = sb.lastIndexOf("[");
-					sb.insert(i, "___");
-					i = sb.lastIndexOf(" _");
-					sb.replace(i, i+2, "  ");
-					i = sb.lastIndexOf("_[");
-					sb.replace(i, i+2, "/[");
+					index = sb.lastIndexOf("[");
+					sb.insert(index, line);
+					index = sb.lastIndexOf(" _");
+					sb.replace(index, index+2, "  ");
+					index = sb.lastIndexOf("_[");
+					sb.replace(index, index+2, "/[");
 				}
-				for(int i = 0; i < node.right.left.size(); i++) sb.append("___");
-				for(int i = 0; i < node.right.right.size(); i++) sb.append(" . ");
-				sb.append(" . ");
+				for(int i = 0; i < node.right.left.size(); i++) sb.append(line);
+				for(int i = 0; i < node.right.right.size(); i++) sb.append(space);
+				sb.append(space);
 				if(node.right != empty) {
-					int i = sb.lastIndexOf("]")+1;
-					sb.insert(i, "___");
-					i = sb.lastIndexOf("_ ");
-					sb.replace(i, i+2, "  ");
-					i = sb.lastIndexOf("]_");
-					sb.replace(i, i+2, "]\\");
+					index = sb.lastIndexOf("]")+1;
+					sb.insert(index, line);
+					index = sb.lastIndexOf("_ ");
+					sb.replace(index, index+2, "  ");
+					index = sb.lastIndexOf("]_");
+					sb.replace(index, index+2, "]\\");
 				}
-				/*
-				 * it's 1:30 AM and i have no idea what i did but it works
-				 * this method is like f*cking black magic or something
-				 */
 			}
 			nodes = next;
 			next = new NodeList();
+			index = sb.lastIndexOf(space);
+			sb.replace(index, index+space.length(), "");
 			sb.append("\n");
 		}
 		return sb.toString();
-	}
-	
-	protected synchronized TreeNode get(V val) {
-		if(exists(val)) return root.get(val);
-		else return null;
 	}
 	
 	private class TreeNode {
@@ -120,8 +120,12 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		}
 		
 		protected boolean exists(V val) {
-			if(value == val) return true;
-			return (val.compareTo(value) < 0 ? left : right).exists(val);
+			if(val.compareTo(value) < 0) {
+				return left.exists(val);
+			} else if(val.compareTo(value) > 0) {
+				return right.exists(val);
+			}
+			return true;
 		}
 		
 		protected TreeNode insert(V val) {
@@ -178,7 +182,7 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 				 * If, however, both children are non-empty, it's a bit trickier.
 				 * 
 				 * On the plus side, we know that left can't be empty, so we don't have to go mucking
-				 * about with testing for null and edge cases when initializing that while loop.
+				 * about with testing for null and edge cases when initializing that while loop down there.
 				 * 
 				 * Basically, I say that "largest" is the node retrieved by starting with largest = left 
 				 * and continuing to assign largest.right to largest until largest.right is empty.
@@ -197,32 +201,21 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 				 * moved, the tree isn't wildly unbalanced like it was in my first solution (which was,
 				 * essentially, put this.right at largest.right and then return this.left).
 				 * 
-				 * Of course, largest has to be disconnected from its parent in order to be moved, or it'll
-				 * result in a recursive tree loop, hence the need for parent, although it slightly breaks the
-				 * context-free part of delete()'s recursion. In my defense, no recursion will occur once the node
-				 * to be deleted is found, so context-free isn't entirely necessary, but I would remove it if I could.
+				 * Also, I'm creating a new node with the same value and putting it in the same place, 
+				 * rather than moving the same node, so that I can remove all prior references to it 
+				 * with a recursive delete() call instead of having to explicitly define its parent.
 				 */
 
-				TreeNode largest = left, parent = this;
+				TreeNode largest = left;
 				while(largest.right != empty) {
-					parent = largest;
 					largest = largest.right;
 				}
-				
-				parent.replaceChild(largest, largest.left);
-				largest.left = left;
-				largest.right = right;
+				largest = new TreeNode(largest.value, left.delete(largest.value), right);
+				/*
+				 * Since the original largest by definition cannot have a right-hand child,
+				 * it's impossible for this to run into an infinite recursive loop.
+				 */
 				return largest;
-			}
-		}
-		
-		protected TreeNode get(V val) {
-			if(value.compareTo(val) < 0) {
-				return left.get(val);
-			} else if(val.compareTo(value) > 0) {
-				return right.get(val);
-			} else {
-				return this;
 			}
 		}
 		
@@ -281,8 +274,8 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		protected void disconnect() {
 			left.disconnect();
 			right.disconnect();
-			left = null;
-			right = null;
+			left = empty;
+			right = empty;
 		}
 		
 		protected void recursiveReorganize(NodeList nodes) {
@@ -292,22 +285,6 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 			right = rightList.remove(rightList.size()/2);
 			left.recursiveReorganize(leftList);
 			right.recursiveReorganize(rightList);
-		}
-		
-		protected void setChildren(TreeNode left, TreeNode right) {
-			this.left = left;
-			this.right = right;
-		}
-		
-		private boolean replaceChild(TreeNode child, TreeNode newChild) {
-			if(left == child) {
-				left = newChild;
-			} else if(right == child) {
-				right = newChild;
-			} else {
-				return false;
-			}
-			return true;
 		}
 		
 		public String toString() {
@@ -320,6 +297,8 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		
 		public EmptyTreeNode() {
 			super(null, null, null);
+			((TreeNode)this).left = this;
+			((TreeNode)this).right = this;
 		}
 		
 		protected int size() {
@@ -335,11 +314,7 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		}
 		
 		protected TreeNode delete(V val) {
-			throw new IllegalStateException();
-		}
-		
-		protected TreeNode get(V val) {
-			throw new IllegalArgumentException(val.toString());
+			return this;
 		}
 		
 		protected List<V> traverse() {
@@ -363,11 +338,12 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		}
 		
 		protected void recursiveReorganize(NodeList nodes) {
+			if(!nodes.isEmpty()) throw new IllegalStateException();
 			return;
 		}
 		
 		public String toString() {
-			return "empty node";
+			return "";
 		}
 	}
 	
@@ -396,12 +372,6 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		
 		public NodeList subList(int fromIndex, int toIndex) {
 			return new NodeList(super.subList(fromIndex, toIndex));
-		}
-		
-		public void trimLeaves() { // I might use this at some point. Probably not. Good to have in case, though.
-			for(TreeNode node : this) {
-				if(node.right == empty && node.left == empty) remove(node);
-			}
 		}
 	}
 	

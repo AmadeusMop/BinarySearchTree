@@ -20,6 +20,7 @@ public class Main {
 		Arrays.sort(l);
 		System.out.println(Arrays.toString(l));
 		tree.delete(7);
+		tree.refresh();
 		System.out.println(tree);
 	}
 
