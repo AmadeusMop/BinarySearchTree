@@ -206,10 +206,9 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 				 * with a recursive delete() call instead of having to explicitly define its parent.
 				 */
 
-				TreeNode largest = left;
-				while(largest.right != empty) {
-					largest = largest.right;
-				}
+				TreeNode largest;
+				for(largest = left; largest.right != empty; largest = largest.right) {}
+				
 				largest = new TreeNode(largest.value, left.delete(largest.value), right);
 				/*
 				 * Since the original largest by definition cannot have a right-hand child,
