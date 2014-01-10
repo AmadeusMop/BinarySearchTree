@@ -3,12 +3,11 @@ package binarySearchTree;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to work with Comparable, I have opted to refrain from using V.equals() at any point, instead using the more consistent (with Comparables) V.compareTo() == 0.
+public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to work with Comparable, I have opted to refrain from using V.equals(V o) in favor of the more consistent (with Comparables) V.compareTo(V o) == 0.
 	private TreeNode root;
-	private final EmptyTreeNode empty;
+	private final EmptyTreeNode empty = new EmptyTreeNode();
 	
 	public BST() {
-		empty = new EmptyTreeNode();
 		root = empty;
 	}
 	
