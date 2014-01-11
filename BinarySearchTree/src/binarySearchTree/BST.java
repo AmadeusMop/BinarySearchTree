@@ -1,102 +1,164 @@
 package binarySearchTree;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to work with Comparable, I have opted to refrain from using V.equals(V o) in favor of the more consistent (with Comparables) V.compareTo(V o) == 0.
-	private TreeNode root;
 	private final EmptyTreeNode empty = new EmptyTreeNode();
+	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 	
-	public BST() {
-		root = empty;
+	private TreeNode root = empty;
+	
+	public BST() {}
+	
+	public BST(V value) {
+		insert(value);
 	}
 	
-	public synchronized boolean exists(V val) {
-		return root.exists(val);
+	public BST(V[] values) {
+		for(V value : values) {
+			insert(value);
+		}
 	}
 	
-	public synchronized void insert(V val) {
-		root = root.insert(val);
+	/*
+	 * Methods specified in the assignment
+	 */
+	
+	public boolean exists(V val) {
+		lock.readLock().lock();
+		try {
+			return root.exists(val);
+		} finally {
+			lock.readLock().unlock();
+		}
 	}
 	
-	public synchronized void delete(V val) {
-		root = root.delete(val);
+	public void insert(V val) {
+		lock.writeLock().lock();
+		try {
+			root = root.insert(val);
+		} finally {
+			lock.writeLock().unlock();
+		}
 	}
 	
-	public synchronized List<V> getInOrderTraversal() {
-		return root.traverse();
+	public void delete(V val) {
+		lock.writeLock().lock();
+		try {
+			root = root.delete(val);
+		} finally {
+			lock.writeLock().unlock();
+		}
 	}
 	
-	public synchronized int size() {
-		return root.size();
+	/*
+	 * Other methods
+	 */
+	
+	public List<V> getInOrderTraversal() {
+		lock.readLock().lock();
+		try {
+			return root.traverse();
+		} finally {
+			lock.readLock().unlock();
+		}
 	}
 	
-	public synchronized void refresh() {
-		NodeList nodes = root.traverseNodes();
-		root.disconnect();
-		root = nodes.remove(nodes.size()/2); // I use (nodes.size()/2) because this way, an even number of nodes
-		root.recursiveReorganize(nodes);	 // will default to being "balanced" on the left.
+	public int size() {
+		lock.readLock().lock();
+		try {
+			return root.size();
+		} finally {
+			lock.readLock().unlock();
+		}
 	}
 	
-	public synchronized String toString() {
+	public void balance() {
+		lock.writeLock().lock();
+		try {
+			NodeList nodes = root.traverseNodes();
+			root.disconnect();
+			root = nodes.remove(nodes.size()/2); // I use (nodes.size()/2) because, with an even number of nodes,
+			root.recursiveReorganize(nodes);	 // it will result in the tree being "balanced" on the left.
+		} finally {
+			lock.writeLock().unlock();
+		}
+	}
+	
+	public String toString() { //read
 		/*
-		 * Ugh. This method is a bit of a mess. It's like the grimy underbelly of the 
+		 * Ugh. This method is a bit of a mess. It's like the grimy underbelly of this 
 		 * elegant and beautiful recursion city. But it works.
 		 * 
 		 * Mostly.
 		 */
-		StringBuilder sb = new StringBuilder(), spaceBuilder = new StringBuilder(), lineBuilder = new StringBuilder();
-		NodeList nodes = new NodeList();
-		nodes.add(root);
-		NodeList next = new NodeList();
-		int len = 1, size, index;
-		String space, line;
-		for(TreeNode node : nodes) {
-			size = node.toString().length();
-			if(size > len) len = size;
-		}
-		for(int i = 0; i < len; i++) {
-			spaceBuilder.append(' ');
-			lineBuilder.append('_');
-		}
-		space = spaceBuilder.toString();
-		line = lineBuilder.toString();
+
+		lock.readLock().lock();
+		try {
 		
-		while(!nodes.isEmpty()) {
-			sb.append(' ');
+			StringBuilder sb = new StringBuilder(), spaceBuilder = new StringBuilder(), lineBuilder = new StringBuilder();
+			NodeList nodes = new NodeList();
+			nodes.add(root);
+			NodeList next = new NodeList();
+			int len = 1, size, index;
+			String space, line;
+			
 			for(TreeNode node : nodes) {
-				next.add(node.left);
-				next.add(node.right);
-				for(int i = 0; i < node.left.left.size(); i++) sb.append(space);
-				for(int i = 0; i < node.left.right.size(); i++) sb.append(line);
-				sb.append(node.toString());
-				if(node.left != empty) {
-					index = sb.lastIndexOf("[");
-					sb.insert(index, line);
-					index = sb.lastIndexOf(" _");
-					sb.replace(index, index+2, "  ");
-					index = sb.lastIndexOf("_[");
-					sb.replace(index, index+2, "/[");
-				}
-				for(int i = 0; i < node.right.left.size(); i++) sb.append(line);
-				for(int i = 0; i < node.right.right.size(); i++) sb.append(space);
-				sb.append(space);
-				if(node.right != empty) {
-					index = sb.lastIndexOf("]")+1;
-					sb.insert(index, line);
-					index = sb.lastIndexOf("_ ");
-					sb.replace(index, index+2, "  ");
-					index = sb.lastIndexOf("]_");
-					sb.replace(index, index+2, "]\\");
-				}
+				size = node.toString().length();
+				if(size > len) len = size;
 			}
-			nodes = next;
-			next = new NodeList();
-			index = sb.lastIndexOf(space);
-			sb.replace(index, index+space.length(), "");
-			sb.append("\n");
+			
+			for(int i = 0; i < len; i++) {
+				spaceBuilder.append(' ');
+				lineBuilder.append('_');
+			}
+			
+			space = spaceBuilder.toString();
+			line = lineBuilder.toString();
+			
+			while(!nodes.isEmpty()) {
+				sb.append(' ');
+				for(TreeNode node : nodes) {
+					next.add(node.left);
+					next.add(node.right);
+					for(int i = 0; i < node.left.left.size(); i++) sb.append(space);
+					for(int i = 0; i < node.left.right.size(); i++) sb.append(line);
+					sb.append(node.toString());
+					if(node.left != empty) {
+						index = sb.lastIndexOf("[");
+						sb.insert(index, line);
+						index = sb.lastIndexOf(" _");
+						sb.replace(index, index+2, "  ");
+						index = sb.lastIndexOf("_[");
+						sb.replace(index, index+2, "/[");
+					}
+					for(int i = 0; i < node.right.left.size(); i++) sb.append(line);
+					for(int i = 0; i < node.right.right.size(); i++) sb.append(space);
+					sb.append(space);
+					if(node.right != empty) {
+						index = sb.lastIndexOf("]")+1;
+						sb.insert(index, line);
+						index = sb.lastIndexOf("_ ");
+						sb.replace(index, index+2, "  ");
+						index = sb.lastIndexOf("]_");
+						sb.replace(index, index+2, "]\\");
+					}
+				}
+				nodes = next;
+				next = new NodeList();
+				index = sb.lastIndexOf(space);
+				sb.replace(index, index+space.length(), "");
+				sb.append("\n");
+			}
+			
+			return sb.toString();
+			
+		} finally {
+			lock.readLock().unlock();
 		}
-		return sb.toString();
 	}
 	
 	private class TreeNode implements Comparable<TreeNode> {
@@ -294,7 +356,6 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		}
 	}
 	
-
 	private final class EmptyTreeNode extends TreeNode {
 		
 		public EmptyTreeNode() {

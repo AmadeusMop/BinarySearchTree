@@ -8,7 +8,8 @@ import java.util.List;
 public class Main {
 
 	public static void main(String[] args) {
-		BST<Integer> tree = new BST<Integer>();
+		
+		/*BST<Integer> tree = new BST<>();
 		tree.insert(5);
 		int[] l = new int[] {0, 1, 2, 7, 3, 9, 4};
 		for(int i : l) {
@@ -21,7 +22,7 @@ public class Main {
 		System.out.println(Arrays.toString(l));
 		tree.delete(7);
 		tree.refresh();
-		System.out.println(tree);
+		System.out.println(tree);*/
 	}
 
 }
