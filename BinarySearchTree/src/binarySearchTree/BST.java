@@ -1,5 +1,10 @@
 package binarySearchTree;
 
+/*import java.util.Collection;
+import java.util.Iterator;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;*/
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -8,6 +13,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to work with Comparable, I have opted to refrain from using V.equals(V o) in favor of the more consistent (with Comparables) V.compareTo(V o) == 0.
 	private final EmptyTreeNode empty = new EmptyTreeNode();
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
+	private int cachedSize = 0;
+	private boolean cacheValid = true;
 	
 	private TreeNode root = empty;
 	
@@ -28,6 +35,14 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 	 */
 	
 	public boolean exists(V val) {
+		/*
+		 * Returns a boolean representing whether the tree contains the given value.
+		 * 
+		 * Runs in O(log n) if the tree is balanced; otherwise, runs in O(n).
+		 */
+		
+		if(val == null) return false;
+		
 		lock.readLock().lock();
 		try {
 			return root.exists(val);
@@ -37,18 +52,47 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 	}
 	
 	public void insert(V val) {
+		/*
+		 * Takes the given value and inserts it into the tree at the appropriate place using recursion.
+		 * 
+		 * Does nothing if the given value is null or already exists in the tree.
+		 * 
+		 * Note: root.insert() is called whether or not the given value already exists, since
+		 * existence is not tested before the insert() call. This is because exists() and insert()
+		 * have the same computational complexity, so testing for existence would be inefficient.
+		 * 
+		 * Runs in O(log n) if tree is balanced; otherwise, runs in O(n).
+		 * 
+		 */
+		
+		if(val == null) return;
+		
 		lock.writeLock().lock();
 		try {
 			root = root.insert(val);
+			cacheValid = false;
 		} finally {
 			lock.writeLock().unlock();
 		}
 	}
 	
 	public void delete(V val) {
+		/*
+		 * Removes the given value from the tree.
+		 * 
+		 * Does nothing if the given value is null or does not exist in the tree.
+		 * 
+		 * Like insert(), existence of val is not tested before the root.delete() call.
+		 * 
+		 * Runs in O(log n) if tree is balanced; otherwise, runs in O(n).
+		 */
+		
+		if(val == null) return;
+		
 		lock.writeLock().lock();
 		try {
 			root = root.delete(val);
+			cacheValid = false;
 		} finally {
 			lock.writeLock().unlock();
 		}
@@ -59,27 +103,67 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 	 */
 	
 	public List<V> getInOrderTraversal() {
+		/*
+		 * Returns an ordered list of values in the tree by retrieving the values with a recursive infix traversal.
+		 * 
+		 * Returns an empty list if the tree is empty.
+		 * 
+		 * Note: This method uses a list that is passed down in the traverse() call from node to child, then modified in the node.
+		 * I would have preferred to simply have each traverse() call return a list, then concatenate those lists, but since that
+		 * requires iterating over at least one of the lists for every traverse() call, that would bump up the complexity to O(2^n)!
+		 * And we do NOT want that. I suppose I could write an immutable List implementation using nodes (I would call it TraversalList)
+		 * that supports construction via two other TraversalLists that would concatenate the lists in O(1) time...
+		 * 
+		 * Runs in O(n).
+		 */
+		
 		lock.readLock().lock();
 		try {
-			return root.traverse();
+			List<V> out = new ArrayList<V>();
+			root.traverse(out);
+			return out;
 		} finally {
 			lock.readLock().unlock();
 		}
 	}
 	
 	public int size() {
-		lock.readLock().lock();
-		try {
-			return root.size();
-		} finally {
-			lock.readLock().unlock();
+		/*
+		 * Returns the size of the tree (i.e., the total number of non-empty nodes the tree contains).
+		 * 
+		 * Uses a cached value of size to minimize delay.
+		 * 
+		 * Runs in O(1) if the cached value is valid; otherwise, runs in O(n);
+		 */
+		
+		if(!cacheValid) {
+			lock.readLock().lock();
+			try {
+				cachedSize = root.size();
+				cacheValid = true;
+			} finally {
+				lock.readLock().unlock();
+			}
 		}
+		
+		return cachedSize;
 	}
 	
 	public void balance() {
+		/*
+		 * "Balances" the tree (i.e., reorganizes the tree into the smallest height possible).
+		 * 
+		 * Does nothing if the tree is empty.
+		 * 
+		 * Note: Although balance() needs to acquire the write lock, since it reorganizes the internal structure of the tree,
+		 * it does not modify the data within the tree, and as such, it does not invalidate cachedSize.
+		 * 
+		 * Runs in O(n).
+		 */
+		
 		lock.writeLock().lock();
 		try {
-			NodeList nodes = root.traverseNodes();
+			NodeList nodes = traverseNodes();
 			root.disconnect();
 			root = nodes.remove(nodes.size()/2); // I use (nodes.size()/2) because, with an even number of nodes,
 			root.recursiveReorganize(nodes);	 // it will result in the tree being "balanced" on the left.
@@ -88,25 +172,47 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		}
 	}
 	
-	public String toString() { //read
+	private NodeList traverseNodes() {
 		/*
+		 * traverseNodes() is almost exactly the same as getInOrderTraversal(), but traverseNodes()
+		 * returns a List of the nodes themselves rather than just their values.
+		 * 
+		 * See getInOrderTraversal for more information.
+		 * 
+		 * Note: No read lock is needed, since traverseNodes() is private and thus will always be used within another method that locks.
+		 */
+		
+		NodeList out = new NodeList();
+		root.traverseNodes(out);
+		return out;
+	}
+	
+	public String toString() {
+		/*
+		 * Returns a String representation of the tree.
+		 * 
+		 * Returns an empty String if the tree is empty.
+		 * 
 		 * Ugh. This method is a bit of a mess. It's like the grimy underbelly of this 
 		 * elegant and beautiful recursion city. But it works.
 		 * 
 		 * Mostly.
+		 * 
+		 * Runs in O(n). (I think.)
 		 */
 
 		lock.readLock().lock();
 		try {
-		
 			StringBuilder sb = new StringBuilder(), spaceBuilder = new StringBuilder(), lineBuilder = new StringBuilder();
 			NodeList nodes = new NodeList();
 			nodes.add(root);
 			NodeList next = new NodeList();
+			NodeList allNodes = traverseNodes();
 			int len = 1, size, index;
-			String space, line;
+			boolean nodesLeft = (allNodes.size() > 0);
+			String space, line, nodeString;
 			
-			for(TreeNode node : nodes) {
+			for(TreeNode node : allNodes) {
 				size = node.toString().length();
 				if(size > len) len = size;
 			}
@@ -119,14 +225,22 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 			space = spaceBuilder.toString();
 			line = lineBuilder.toString();
 			
-			while(!nodes.isEmpty()) {
+			while(nodesLeft) {
 				sb.append(' ');
+				nodesLeft = false;
 				for(TreeNode node : nodes) {
+					if(node == empty) {
+						next.add(empty);
+						sb.append(space);
+						continue;
+					}
+					nodesLeft = true;
 					next.add(node.left);
 					next.add(node.right);
+					nodeString = node.toString();
 					for(int i = 0; i < node.left.left.size(); i++) sb.append(space);
 					for(int i = 0; i < node.left.right.size(); i++) sb.append(line);
-					sb.append(node.toString());
+					sb.append(nodeString);
 					if(node.left != empty) {
 						index = sb.lastIndexOf("[");
 						sb.insert(index, line);
@@ -146,6 +260,13 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 						index = sb.lastIndexOf("]_");
 						sb.replace(index, index+2, "]\\");
 					}
+					if(node != empty) {
+						index = sb.lastIndexOf("[")+1;
+						for(int i = (len - nodeString.length()+1)/2; i > 0; i--) sb.insert(index, ' ');
+
+						index = sb.lastIndexOf("]");
+						for(int i = (len - nodeString.length())/2; i > 0; i--) sb.insert(index, ' ');
+					}
 				}
 				nodes = next;
 				next = new NodeList();
@@ -153,7 +274,6 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 				sb.replace(index, index+space.length(), "");
 				sb.append("\n");
 			}
-			
 			return sb.toString();
 			
 		} finally {
@@ -161,10 +281,18 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		}
 	}
 	
-	private class TreeNode implements Comparable<TreeNode> {
+	private class TreeNode implements Comparable<V> {
+		/*
+		 * I have endeavored to make the recursive methods in TreeNode be as "blind" as possible - that is,
+		 * with as little testing for "special cases" (such as val being null) as is necessary.
+		 * Part of this is having each node have no control or access to its parent. No node may see "up" the
+		 * tree: nodes may only see "down". Each recursive method loop ends when either the escape condition
+		 * (usually compareTo(val) == 0) is met or when it reaches empty, which cannot recurse.
+		 */
+
+		private final V value;
 		private TreeNode left;
 		private TreeNode right;
-		private V value;
 		
 		protected TreeNode(V val) {
 			this(val, empty, empty);
@@ -181,18 +309,18 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		}
 		
 		protected boolean exists(V val) {
-			if(val.compareTo(value) < 0) {
+			if(compareTo(val) > 0) {
 				return left.exists(val);
-			} else if(val.compareTo(value) > 0) {
+			} else if(compareTo(val) < 0) {
 				return right.exists(val);
 			}
 			return true;
 		}
 		
 		protected TreeNode insert(V val) {
-			if(val.compareTo(value) < 0) {
+			if(compareTo(val) > 0) {
 				left = left.insert(val);
-			} else if(val.compareTo(value) > 0) {
+			} else if(compareTo(val) < 0) {
 				right = right.insert(val);
 			}
 			return this;
@@ -222,13 +350,14 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 			 * No node needs to worry about what its children's values are, and every node is responsible for its own deletion,
 			 * or lack thereof; no node needs to have its parent clean up after it.
 			 * 
-			 * Simple, clean, and context-free.
+			 * Simple, clean, and blind.
 			 * System.out.println("aww yiss");
 			 */
-			if(val.compareTo(value) < 0) {
+			
+			if(compareTo(val) > 0) {
 				left = left.delete(val);
 				return this;
-			} else if(val.compareTo(value) > 0) {
+			} else if(compareTo(val) < 0) {
 				right = right.delete(val);
 				return this;
 			} else {
@@ -272,63 +401,38 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 				
 				largest = new TreeNode(largest.value, left.delete(largest.value), right);
 				/*
-				 * Since the original largest by definition cannot have a right-hand child,
-				 * it's impossible for this to run into an infinite recursive loop.
+				 * Yes, I'm calling delete() for all three possibilities of compareTo(),
+				 * but delete() isn't called if either of the node to be deleted's children are empty,
+				 * and since largest by definition cannot have a right-hand child, the left.delete()
+				 * statement here cannot run into an infinite recursive loop, as it will stop recursing
+				 * when it reaches largest.
 				 */
 				return largest;
 			}
 		}
 		
-		protected List<V> traverse() {
-			return traverse(TraversalType.INFIX); //Default is infix.
+		protected void traverse(List<V> in) {
+			traverse(in, TraversalType.INFIX); //Default is infix.
 		}
 		
-		protected List<V> traverse(TraversalType type) {
-			List<V> o = new ArrayList<V>();
-			List<V> leftList = left.traverse(type);
-			List<V> rightList = right.traverse(type);
-			o.addAll(left.traverse(type));
-			o.addAll(right.traverse(type));
-
-			int i = 0;
-			
-			switch(type) {
-				case POSTFIX:
-					i += rightList.size();
-				case INFIX:
-					i += leftList.size();
-				case PREFIX:
-					break;
-			}
-			
-			o.add(i, value);
-			return o;
+		protected void traverse(List<V> in, TraversalType type) {
+			if(type == TraversalType.PREFIX) in.add(value);
+			left.traverse(in, type);
+			if(type == TraversalType.INFIX) in.add(value); 
+			right.traverse(in, type);
+			if(type == TraversalType.POSTFIX) in.add(value); 
 		}
 		
-		protected NodeList traverseNodes() {
-			return traverseNodes(TraversalType.INFIX); //Again, default is infix.
+		protected void traverseNodes(NodeList in) {
+			traverseNodes(in, TraversalType.INFIX); //Again, default is infix.
 		}
 		
-		protected NodeList traverseNodes(TraversalType type) {
-			NodeList o = new NodeList();
-			NodeList leftList = left.traverseNodes(type);
-			NodeList rightList = right.traverseNodes(type);
-			o.addAll(left.traverseNodes(type));
-			o.addAll(right.traverseNodes(type));
-
-			int i = 0;
-			
-			switch(type) {
-				case POSTFIX:
-					i += rightList.size();
-				case INFIX:
-					i += leftList.size();
-				case PREFIX:
-					break;
-			}
-			
-			o.add(i, this);
-			return o;
+		protected void traverseNodes(NodeList in, TraversalType type) {
+			if(type == TraversalType.PREFIX) in.add(this);
+			left.traverseNodes(in, type);
+			if(type == TraversalType.INFIX) in.add(this); 
+			right.traverseNodes(in, type);
+			if(type == TraversalType.POSTFIX) in.add(this); 
 		}
 		
 		protected void disconnect() {
@@ -351,8 +455,8 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 			return String.format("[%1s]", value.toString());
 		}
 		
-		public int compareTo(TreeNode o) {
-			return value.compareTo(o.value);
+		public int compareTo(V val) {
+			return value.compareTo(val);
 		}
 	}
 	
@@ -380,20 +484,12 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 			return this;
 		}
 		
-		protected List<V> traverse() {
-			return new ArrayList<V>();
+		protected void traverse(List<V> in, TraversalType type) {
+			return;
 		}
 		
-		protected List<V> traverse(TraversalType type) {
-			return traverse();
-		}
-		
-		protected NodeList traverseNodes() {
-			return new NodeList();
-		}
-		
-		protected NodeList traverseNodes(TraversalType type) {
-			return traverseNodes();
+		protected void traverseNodes(NodeList in, TraversalType type) {
+			return;
 		}
 		
 		protected void disconnect() {
@@ -403,6 +499,10 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		protected void recursiveReorganize(NodeList nodes) {
 			if(!nodes.isEmpty()) throw new IllegalStateException();
 			return;
+		}
+		
+		public int compareTo(V val) {
+			throw new IllegalStateException();
 		}
 		
 		public String toString() {
@@ -438,5 +538,170 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		}
 	}
 	
+	/*
+	 * ...Okay, I did make a TraversalList. I might actually put it in BST later.
+	 * Don't even bother reading it all right now. It's still in-progress and there's nothing below it but an enum.
+	 */
+	
+	/*
+	private class TraversalList<E> extends java.util.AbstractList<E> {
+		private TraversalNode first;
+		private TraversalNode last;
+		private int size;
+		
+		public TraversalList(E element) {
+			TraversalNode node = new TraversalNode(element);
+			first = node;
+			last = node;
+		}
+		
+		public TraversalList(TraversalList<E> l1, TraversalList<E> l2, E element, TraversalType type) {
+			TraversalNode node = new TraversalNode(element);
+			size = l1.size() + l2.size() + 1;
+			switch(type) {
+				case PREFIX:
+					first = node;
+					node.next = l1.first;
+					node.next.prev = node;
+					last = l2.last;
+					l1.last.next = l2.first;
+					l2.first.prev = l1.last.next;
+					break;
+				case INFIX:
+					first = l1.first;
+					last = l2.last;
+					node.prev = l1.last;
+					node.next = l2.first;
+					node.next.prev = node;
+					node.prev.next = node;
+					break;
+				case POSTFIX:
+					last = node;
+					node.prev = l2.last;
+					node.prev.next = node;
+					first = l1.first;
+					l1.last.next = l2.first;
+					l2.first.prev = l1.last.next;
+					break;
+			}
+			l1.clear();
+			l2.clear();
+		}
+		
+		private class TraversalNode {
+			private E value;
+			private TraversalNode next;
+			private TraversalNode prev;
+			
+			public TraversalNode(E value) {
+				this.value = value;
+				this.next = null;
+				this.prev = null;
+			}
+		}
+		
+		public void clear() {
+			first = null;
+			last = null;
+			size = 0;
+		}
+		
+		public Iterator<E> iterator() {
+			return listIterator();
+		}
+
+		public ListIterator<E> listIterator() {
+			return new TraversalListIterator();
+		}
+
+		public ListIterator<E> listIterator(int index) {
+			return new TraversalListIterator(index);
+		}
+
+		public int size() {
+			return size;
+		}
+		
+		public E get(int index) {
+			return getNode(index).value;
+		}
+		
+		private TraversalNode getNode(int index) {
+			if(index >= size) throw new IndexOutOfBoundsException(Integer.toString(index));
+			TraversalNode node;
+			if(size/2 > index) {
+				node = first;
+				for(int i = 0; i < index; i++) node = node.next;
+			} else {
+				node = last;
+				for(int i = size-1; i > index; i--) node = node.prev;
+			}
+			return node;
+		}
+		
+		private class TraversalListIterator implements ListIterator<E> {
+			private TraversalNode node;
+			private int index;
+			
+			public TraversalListIterator(int index) {
+				this.index = index;
+				node = getNode(index);
+			}
+			
+			public TraversalListIterator() {
+				this.index = 0;
+				node = first;
+			}
+
+			public void add(E e) {
+				throw new UnsupportedOperationException();
+			}
+
+			public boolean hasNext() {
+				return node != null;
+			}
+
+			public boolean hasPrevious() {
+				return node.prev != null;
+			}
+
+			public E next() {
+				if(!hasNext()) throw new NoSuchElementException();
+				E element = node.value;
+				node = node.next;
+				index++;
+				return element;
+			}
+
+			public int nextIndex() {
+				return index;
+			}
+
+			public E previous() {
+				if(!hasPrevious()) throw new NoSuchElementException();
+				if(!hasNext()) node = last;
+				else node = node.prev;
+				return node.value;
+			}
+
+			public int previousIndex() {
+				return index - 1;
+			}
+
+			@Override
+			public void remove() {
+				throw new UnsupportedOperationException();
+				
+			}
+
+			@Override
+			public void set(E e) {
+				throw new UnsupportedOperationException();
+				
+			}
+			
+		}
+	}*/
+
 	private static enum TraversalType {PREFIX, INFIX, POSTFIX};
 }
