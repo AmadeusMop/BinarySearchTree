@@ -38,6 +38,8 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		/*
 		 * Returns a boolean representing whether the tree contains the given value.
 		 * 
+		 * Returns false if the value is null.
+		 * 
 		 * Runs in O(log n) if the tree is balanced; otherwise, runs in O(n).
 		 */
 		
