@@ -105,14 +105,28 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 			lock.writeLock().unlock();
 		}
 	}
+
+	public List<V> getInOrderTraversal() {
+		/*
+		 * Same as getInOrderTraversal, but infix only.
+		 * 
+		 * See getInOrderTraversal() for more information.
+		 */
+		
+		return getInOrderTraversal(TraversalType.INFIX);
+	}
 	
 	/*
 	 * Other methods
 	 */
 	
-	public List<V> getInOrderTraversal() {
+	public BST<V> getImmutableTree() {
+		return new ImmutableBST<>(this);
+	}
+
+	protected List<V> getInOrderTraversal(TraversalType type) {
 		/*
-		 * Returns an ordered list of values in the tree by retrieving the values with a recursive infix traversal.
+		 * Returns an ordered list of values in the tree by retrieving the values with a recursive traversal.
 		 * 
 		 * Returns an empty list if the tree is empty.
 		 * 
@@ -128,7 +142,7 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		lock.readLock().lock();
 		try {
 			List<V> out = new ArrayList<V>();
-			root.traverse(out);
+			root.traverse(out, type);
 			return out;
 		} finally {
 			lock.readLock().unlock();
@@ -423,10 +437,6 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 			}
 		}
 		
-		protected void traverse(List<V> in) {
-			traverse(in, TraversalType.INFIX); //Default is infix.
-		}
-		
 		protected void traverse(List<V> in, TraversalType type) {
 			if(type == TraversalType.PREFIX) in.add(value);
 			left.traverse(in, type);
@@ -553,7 +563,7 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 	
 	/*
 	 * ...Okay, I did make a TraversalList. I might actually put it in the BST later.
-	 * Don't even bother reading it all right now. It's still in-progress and there's nothing below it but an enum.
+	 * Don't even bother reading it all right now. It's still in-progress and there's nothing below it.
 	 */
 	
 	/*
@@ -715,6 +725,8 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 			
 		}
 	}*/
-
-	private static enum TraversalType {PREFIX, INFIX, POSTFIX};
+	
+	{
+		//Ignore this. For Eclipse formatting only.
+	}
 }

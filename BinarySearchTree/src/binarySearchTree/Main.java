@@ -16,6 +16,11 @@ public class Main {
 	public static void main(String[] args) {
 		BST<Integer> tree;
 		tree = new BST<Integer>();
+
+		Integer[] l = new Integer[] {0, 1, 2, 7, 3, 9, 4};
+		ImmutableBST<Integer> tree2 = new ImmutableBST<>(l);
+		System.out.println(tree2.toString());
+		
 		/*
 		tree.insert(5); 
 		tree.insert(-20);
@@ -33,14 +38,14 @@ public class Main {
 		tree.delete(7);
 		tree.balance();*/
 		
-		int m = pow2(7);
+		/*int m = pow2(7);
 		for(int i = 1; i < m; i++) {
 			tree.insert(i);
 		}
 		
 		System.out.println(tree);
 		tree.balance();
-		System.out.println(tree);
+		System.out.println(tree);*/
 	}
 
 }
