@@ -33,10 +33,11 @@ public class Main {
 		tree.delete(7);
 		tree.balance();*/
 		
-		int m = pow2(6);
+		int m = pow2(7);
 		for(int i = 1; i < m; i++) {
 			tree.insert(i);
 		}
+		
 		System.out.println(tree);
 		tree.balance();
 		System.out.println(tree);

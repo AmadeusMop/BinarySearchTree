@@ -198,7 +198,7 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		 * 
 		 * Mostly.
 		 * 
-		 * Runs in O(n). (I think.)
+		 * Runs in O(n^2). (I think.)
 		 */
 
 		lock.readLock().lock();
@@ -539,7 +539,7 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 	}
 	
 	/*
-	 * ...Okay, I did make a TraversalList. I might actually put it in BST later.
+	 * ...Okay, I did make a TraversalList. I might actually put it in the BST later.
 	 * Don't even bother reading it all right now. It's still in-progress and there's nothing below it but an enum.
 	 */
 	
