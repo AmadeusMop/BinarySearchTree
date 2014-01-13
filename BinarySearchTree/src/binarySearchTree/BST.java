@@ -321,8 +321,9 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 				return left.exists(val);
 			} else if(compareTo(val) < 0) {
 				return right.exists(val);
+			} else {
+				return true;
 			}
-			return true;
 		}
 		
 		protected TreeNode insert(V val) {
@@ -330,6 +331,8 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 				left = left.insert(val);
 			} else if(compareTo(val) < 0) {
 				right = right.insert(val);
+			} else {
+				hasChanged = false;
 			}
 			return this;
 		}
