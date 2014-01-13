@@ -15,6 +15,7 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 	private final ReadWriteLock lock = new ReentrantReadWriteLock();
 	private int cachedSize = 0;
 	private boolean cacheValid = true;
+	private boolean hasChanged;
 	
 	private TreeNode root = empty;
 	
@@ -53,11 +54,12 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		}
 	}
 	
-	public void insert(V val) {
+	public boolean insert(V val) {
 		/*
-		 * Takes the given value and inserts it into the tree at the appropriate place using recursion.
+		 * Takes the given value and inserts it into the tree at the appropriate place using recursion,
+		 * then returns whether or not the tree has been changed by the operation.
 		 * 
-		 * Does nothing if the given value is null or already exists in the tree.
+		 * Returns false if the given value is null or already exists in the tree.
 		 * 
 		 * Note: root.insert() is called whether or not the given value already exists, since
 		 * existence is not tested before the insert() call. This is because exists() and insert()
@@ -67,34 +69,38 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		 * 
 		 */
 		
-		if(val == null) return;
+		if(val == null) return false;
 		
 		lock.writeLock().lock();
 		try {
+			hasChanged = true;
 			root = root.insert(val);
 			cacheValid = false;
+			return hasChanged;
 		} finally {
 			lock.writeLock().unlock();
 		}
 	}
 	
-	public void delete(V val) {
+	public boolean delete(V val) {
 		/*
-		 * Removes the given value from the tree.
+		 * Removes the given value from the tree, then returns whether or not the tree has been changed by the operation.
 		 * 
-		 * Does nothing if the given value is null or does not exist in the tree.
+		 * Return false if the given value is null or does not exist in the tree.
 		 * 
 		 * Like insert(), existence of val is not tested before the root.delete() call.
 		 * 
 		 * Runs in O(log n) if tree is balanced; otherwise, runs in O(n).
 		 */
 		
-		if(val == null) return;
+		if(val == null) return false;
 		
 		lock.writeLock().lock();
 		try {
+			hasChanged = false;
 			root = root.delete(val);
 			cacheValid = false;
+			return hasChanged;
 		} finally {
 			lock.writeLock().unlock();
 		}
@@ -363,6 +369,7 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 				right = right.delete(val);
 				return this;
 			} else {
+				hasChanged = true;
 				if(left == empty || right == empty) { 
 					TreeNode o = (left == empty ? right : left); 		// If either of this node's children are empty, we can just return the other one and remove all 
 					left = empty; 										// references to and from this node. Again, this is to ensure that no memory or security leaks are 
@@ -479,6 +486,7 @@ public class BST<V extends Comparable<V>> { // Note: Since generalizing BST to w
 		}
 		
 		protected TreeNode insert(V val) {
+			hasChanged = true;
 			return new TreeNode(val);
 		}
 		

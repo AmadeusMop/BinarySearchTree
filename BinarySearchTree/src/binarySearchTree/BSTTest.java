@@ -16,10 +16,11 @@ public class BSTTest {
 
 	@Test
 	public void insertTest() {
-		tree.insert(5);
-		tree.insert(3);
-		tree.insert(6);
-		tree.insert(null); //Should not throw an exception here
+		assertTrue(tree.insert(5));
+		assertTrue(tree.insert(3));
+		assertTrue(tree.insert(6));
+		assertFalse(tree.insert(5));
+		assertFalse(tree.insert(null)); //Should not throw an exception here
 	}
 	
 	@Test
